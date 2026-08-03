@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MOC Trade Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+<style>
+  :root{--navy:#16243F;--royal:#2E5C9E;--bg:#F4F6F9;--card:#FFF;--line:#E2E7EF;
+        --text:#1C2733;--muted:#6B7889;--exp:#2E5C9E;--imp:#B5860B;
+        --up:#1E8E5A;--down:#C0392B;--violet:#6B4E9E}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Bai Jamjuree',sans-serif;font-size:14px}
+  header{background:var(--navy);color:#fff;padding:16px 28px;display:flex;align-items:center;gap:16px}
+  header h1{margin:0;font-size:17px;font-weight:600;flex:1}
+  header p{margin:2px 0 0;font-size:11.5px;color:#AEBBCF;font-weight:400}
+  .backbtn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;
+    padding:7px 14px;border-radius:7px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:none}
+  .backbtn:hover{background:rgba(255,255,255,.22)}
+  main{max-width:1280px;margin:0 auto;padding:20px}
+  .view{display:none}.view.on{display:block}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+  .kw-row{display:flex;gap:10px}
+  .kw-row input{flex:1;padding:12px 15px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:15px;outline:none}
+  .kw-row input:focus{border-color:var(--royal)}
+  .kw-row button{padding:12px 26px;border:none;border-radius:8px;background:var(--royal);color:#fff;
+    font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
+  .kw-row button:hover{background:var(--navy)}
+  .kw-row button:disabled{background:#AEBBCF;cursor:wait}
+
+  .ctrls{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+  .ctrl label{display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  .ctrl select,.ctrl input{width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:7px;font-family:inherit;font-size:13px;background:#fff}
+  .ctrl select:focus,.ctrl input:focus{border-color:var(--royal);outline:none}
+  .seg{display:flex;border:1.5px solid var(--line);border-radius:7px;overflow:hidden}
+  .seg span{flex:1;text-align:center;padding:9px 4px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted);background:#fff}
+  .seg span.on{background:var(--navy);color:#fff}
+
+  .status{margin-top:14px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pill{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  .pill.ok{background:#E3F5EC;color:#1E8E5A}
+  .pill.err{background:#FCE9E7;color:#C0392B}
+  .pill.wait{background:#FFF6E0;color:#96700A}
+
+  .hintbar{background:#EEF3FA;border:1px solid #CFDDEE;border-radius:8px;padding:10px 15px;
+    margin-top:14px;font-size:12.5px;color:var(--navy);display:flex;align-items:center;gap:9px}
+  .hintbar b{font-weight:600}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin:22px 0 10px;flex-wrap:wrap;gap:10px}
+  .toolbar h2{margin:0;font-size:14px;color:var(--navy);font-weight:600}
+  .toolbar .right{display:flex;gap:8px;align-items:center}
+  .toolbar select{padding:6px 10px;border:1.5px solid var(--line);border-radius:6px;font-family:inherit;font-size:12px;background:#fff}
+  .toolbar button{padding:7px 14px;border:none;border-radius:6px;background:var(--royal);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+
+  .tablewrap{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:none}
+  .tablewrap.show{display:block}
+  .scroll{overflow-x:auto;max-height:620px;overflow-y:auto}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  thead th{position:sticky;top:0;background:#F7F9FC;text-align:left;padding:10px 14px;color:var(--muted);
+    font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:2}
+  td{padding:10px 14px;border-bottom:1px solid #F1F3F7;vertical-align:top;line-height:1.5}
+  tbody tr:hover{background:#F7FAFE}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  th.num{text-align:right}
+
+  /* clickable code chips */
+  .mono{font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:11.5px;padding:4px 9px;border-radius:5px;white-space:nowrap;display:inline-block}
+  .mono.hs{background:#EDF0F5;color:var(--navy)}
+  .mono.com{background:#EAF0F9;color:var(--royal)}
+  .pick{cursor:pointer;border:1.5px solid transparent;transition:all .12s;user-select:none}
+  .pick:hover{border-color:var(--royal);transform:translateY(-1px)}
+  .pick.armed{border-color:var(--royal);background:var(--royal);color:#fff;
+    box-shadow:0 0 0 3px rgba(46,92,158,.18)}
+  .pick.armed::after{content:' ↵ กดอีกครั้ง';font-size:9.5px;font-weight:600;opacity:.9}
+
+  .en{color:var(--muted);font-size:11.5px;margin-top:2px}
+  .flag{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;white-space:nowrap}
+  .flag.export{background:#E4EDF9;color:var(--exp)}
+  .flag.import{background:#FAF2DC;color:var(--imp)}
+  .desc{min-width:250px;max-width:400px}
+
+  .msg{background:#FFF8E6;border:1px solid #EBD9A6;border-radius:9px;padding:15px 18px;line-height:1.65;display:none;margin-top:16px}
+  .msg.show{display:block}
+  .msg b{color:#7A5A05}
+  code{background:#EEF1F6;padding:1px 6px;border-radius:4px;font-family:ui-monospace,monospace;font-size:11.5px}
+  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
+  .empty .big{font-size:15px;color:var(--text);font-weight:600;margin-bottom:5px}
+
+  /* ---------- page 2 ---------- */
+  .subject{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin-bottom:14px}
+  .subject .top{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .subject h2{margin:0;font-size:17px;color:var(--navy);flex:1;min-width:200px}
+  .subject .sub{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.6}
+  .lvl{font-size:10px;font-weight:700;padding:4px 10px;border-radius:5px;letter-spacing:.4px}
+  .lvl.hs{background:#EDE7F7;color:var(--violet)}
+  .lvl.com{background:#E4EDF9;color:var(--royal)}
+
+  .unitbar{border-radius:9px;padding:13px 17px;margin-bottom:14px;font-size:13px;line-height:1.6;
+    display:flex;align-items:flex-start;gap:11px}
+  .unitbar.has{background:#E9F6EF;border:1px solid #A9DCC3}
+  .unitbar.no{background:#FCEDEB;border:1px solid #EFC0B9}
+  .unitbar .ic{font-size:16px;line-height:1.2}
+  .unitbar b{font-weight:700}
+
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card .lb{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .card .vl{font-size:21px;font-weight:700;color:var(--navy);margin-top:6px;font-variant-numeric:tabular-nums}
+  .card .un{font-size:11px;color:var(--muted);font-weight:500;margin-left:3px}
+  .card .dl{font-size:12px;font-weight:600;margin-top:4px}
+  .pos{color:var(--up)}.neg{color:var(--down)}
+
+  .chartbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 18px 6px;margin-bottom:14px}
+  .chartbox h3{margin:0 0 4px;font-size:13px;color:var(--navy);font-weight:600}
+  .chartbox .cap{font-size:11.5px;color:var(--muted);margin-bottom:6px}
+  .ch{width:100%;height:300px}
+  .ch.sm{height:250px}
+  
+
+  .prog{height:4px;background:#E2E7EF;border-radius:3px;overflow:hidden;margin-top:12px;display:none}
+  .prog.show{display:block}
+  .prog i{display:block;height:100%;background:var(--royal);width:0%;transition:width .25s}
+
+  @media(max-width:900px){.ctrls{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:540px){.ctrls{grid-template-columns:1fr}.kw-row{flex-direction:column}}
+</style>
+</head>
+<body>
+
+<header>
+  <button class="backbtn" id="back">← กลับไปค้นหา</button>
+  <div style="flex:1">
+    <h1 id="hTitle">MOC Trade Explorer</h1>
+    <p id="hSub">ระบบสืบค้นสินค้าและเรียกดูข้อมูลมูลค่า ปริมาณ และราคาต่อหน่วยย้อนหลัง</p>
+  </div>
+</header>
+
+<main>
+
+<!-- ==================== PAGE 1 ==================== -->
+<div class="view on" id="view1">
+
+  <div class="panel">
+    <label style="display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:7px">ระบุชื่อสินค้าที่ต้องการค้นหา</label>
+    <div class="kw-row">
+      <input id="kw" type="text" placeholder="เช่น มะพร้าว, ข้าว, ยางพารา, rubber" autocomplete="off">
+      <button id="go">ค้นหา</button>
+    </div>
+    <div class="ctrls">
+      <div class="ctrl">
+        <label>ประเภทการค้า</label>
+        <div class="seg" id="segImex">
+          <span data-v="" class="on">ทั้งหมด</span>
+          <span data-v="export">ส่งออก</span>
+          <span data-v="import">นำเข้า</span>
+        </div>
+      </div>
+      <div class="ctrl"><label>ชุดพิกัดศุลกากร (ปีที่ปรับปรุง)</label>
+        <select id="rev"><option>2022</option><option>2017</option><option>2012</option><option>2007</option><option>2002</option></select></div>
+      <div class="ctrl"><label>จัดเรียงผลลัพธ์ตาม</label>
+        <select id="ord">
+          <option value="hs_code">รหัสพิกัดศุลกากร</option><option value="com_code">รหัสกลุ่มสินค้า</option>
+        </select></div>
+      <div class="ctrl"><label>ระดับความละเอียดของพิกัด</label>
+        <select id="hslen"><option value="">ทุกระดับ</option><option value="2">2 หลัก (หมวดกว้าง)</option><option value="4">4 หลัก</option>
+          <option value="6">6 หลัก</option><option value="8">8 หลัก</option><option value="11">11 หลัก (ละเอียดสุด)</option></select></div>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:600;color:var(--navy)">กรณีทราบรหัสสินค้าอยู่แล้ว</span>
+      <span style="font-size:11.5px;color:var(--muted)">สามารถระบุรหัสเพื่อเรียกดูข้อมูลได้โดยตรง ไม่ต้องผ่านการค้นหา</span>
+    </div>
+    <div class="ctrls" style="margin-top:0;padding-top:0;border-top:none">
+      <div class="ctrl"><label>ประเภทของรหัส</label>
+        <div class="seg" id="j_lvl"><span data-v="hs" class="on">พิกัดศุลกากร (HS Code)</span><span data-v="com">กลุ่มสินค้า (MOC)</span></div></div>
+      <div class="ctrl"><label>รหัสสินค้า</label>
+        <input id="j_code" type="text" placeholder="เช่น 1203" autocomplete="off"></div>
+      <div class="ctrl"><label>ทิศทางการค้า</label>
+        <div class="seg" id="j_flow"><span data-v="export" class="on">ส่งออก</span><span data-v="import">นำเข้า</span></div></div>
+      <div class="ctrl"><label>&nbsp;</label>
+        <button id="j_go" style="width:100%;padding:9px;border:none;border-radius:7px;background:var(--navy);
+          color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">เรียกดูข้อมูล</button></div>
+    </div>
+    <div id="j_status" style="font-size:12px;color:var(--muted);margin-top:11px;line-height:1.6"></div>
+  </div>
+
+  <div class="hintbar" id="hintbar" style="display:none">
+    <b>วิธีเรียกดูข้อมูลย้อนหลัง:</b> เลือกรหัสในตาราง โดย
+    <span class="mono hs" style="padding:2px 7px">พิกัดศุลกากร</span> ใช้สำหรับสินค้าเฉพาะรายการ ส่วน
+    <span class="mono com" style="padding:2px 7px">กลุ่มสินค้า</span> ใช้สำหรับภาพรวมทั้งหมวด
+    จากนั้น<b>คลิกรหัสเดิมซ้ำอีกครั้งเพื่อเปิดหน้าข้อมูล</b>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="toolbar" id="toolbar" style="display:none">
+    <h2 id="resTitle">ผลการค้นหา</h2>
+    <div class="right">
+      <select id="grp"><option value="flat">แสดงทุกแถว</option><option value="com">ยุบตามกลุ่มสินค้า (com_code)</option></select>
+      <button id="csv">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="tablewrap" id="tablewrap"><div class="scroll"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div></div>
+
+  <div class="empty" id="empty">
+    <div class="big">กรุณาระบุชื่อสินค้าเพื่อเริ่มการค้นหา</div>
+    <div>ระบบจะสืบค้นจากฐานข้อมูลกระทรวงพาณิชย์ และแสดงรหัสสินค้าที่สอดคล้องกับคำค้น</div>
+  </div>
+</div>
+
+<!-- ==================== PAGE 2 ==================== -->
+<div class="view" id="view2">
+
+  <div class="subject">
+    <div class="top">
+      <span class="lvl" id="s_lvl">-</span>
+      <span class="mono" id="s_code">-</span>
+      <h2 id="s_name">-</h2>
+      <span class="flag" id="s_flow">-</span>
+    </div>
+    <div class="sub" id="s_meta"></div>
+  </div>
+
+  <div class="panel">
+    <div class="ctrls" style="margin-top:0;padding-top:0;border-top:none">
+      <div class="ctrl"><label>ทิศทางการค้า</label>
+        <div class="seg" id="d_flow"><span data-v="export">ส่งออก</span><span data-v="import">นำเข้า</span></div></div>
+      <div class="ctrl"><label>ปีเริ่มต้น</label><select id="d_y1"></select></div>
+      <div class="ctrl"><label>ปีสิ้นสุด</label><select id="d_y2"></select></div>
+      <div class="ctrl"><label>&nbsp;</label>
+        <button id="d_go" style="width:100%;padding:9px;border:none;border-radius:7px;background:var(--royal);
+          color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">ดึงข้อมูล</button></div>
+    </div>
+    <div class="ctrls" style="margin-top:14px">
+      <div class="ctrl"><label>ประเทศคู่ค้า</label><select id="d_ctry"><option value="">ทุกประเทศ (รวม)</option></select></div>
+      <div class="ctrl"><label>ความถี่ของข้อมูล</label>
+        <select id="d_freq">
+          <option value="M" selected>รายเดือน</option>
+          <option value="Q">รายไตรมาส</option>
+          <option value="H">รายครึ่งปี</option>
+          <option value="Y">รายปี</option>
+        </select></div>
+      <div class="ctrl"><label>หน่วยที่ใช้คำนวณราคา</label><select id="d_unit"></select></div>
+      <div class="ctrl"><label>จำนวนประเทศคู่ค้าสูงสุดต่อเดือน</label>
+        <select id="d_limit">
+          <option value="500" selected>500 — ครบทุกประเทศ (แนะนำ)</option>
+          <option value="200">200</option>
+          <option value="100">100</option>
+          <option value="50">50</option>
+          <option value="10">10 — ข้อมูลไม่ครบถ้วน</option>
+        </select></div>
+    </div>
+    <div style="display:flex;gap:9px;margin-top:12px;flex-wrap:wrap">
+      <button id="d_csv" style="padding:9px 16px;border:1.5px solid var(--royal);border-radius:7px;
+        background:#fff;color:var(--royal);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">
+        ↓ ดาวน์โหลดข้อมูลสรุปตามช่วงเวลา</button>
+      <button id="d_csv_raw" style="padding:9px 16px;border:1.5px solid var(--line);border-radius:7px;
+        background:#fff;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">
+        ↓ ดาวน์โหลดข้อมูลดิบรายประเทศรายเดือน</button>
+    </div>
+    <div class="status" id="d_status"></div>
+    <div class="prog" id="d_prog"><i id="d_progbar"></i></div>
+  </div>
+
+  <div class="msg" id="d_msg"></div>
+
+  <div id="d_result" style="display:none;margin-top:16px">
+
+    <div class="unitbar" id="d_unitbar"><span class="ic">●</span><div id="d_unittext"></div></div>
+
+    <div class="cards">
+      <div class="card"><div class="lb">มูลค่าล่าสุด</div><div class="vl" id="k_val">-<span class="un">ล้าน USD</span></div><div class="dl" id="k_val_d"></div></div>
+      <div class="card"><div class="lb">มูลค่าสะสม YTD</div><div class="vl" id="k_ytd">-<span class="un">ล้าน USD</span></div><div class="dl" id="k_ytd_d"></div></div>
+      <div class="card"><div class="lb">ปริมาณล่าสุด</div><div class="vl" id="k_qty">-<span class="un" id="k_qty_u"></span></div><div class="dl" id="k_qty_d"></div></div>
+      <div class="card"><div class="lb">ราคาต่อหน่วยล่าสุด</div><div class="vl" id="k_up">-<span class="un" id="k_up_u"></span></div><div class="dl" id="k_up_d"></div></div>
+    </div>
+
+    <div class="chartbox">
+      <h3>โครงสร้างตลาดและส่วนร่วมต่อการเติบโต</h3>
+      <div class="cap" id="cap_ct"></div>
+      <div class="seg" id="ct_mode" style="max-width:420px;margin:8px 0 12px">
+        <span data-v="level" class="on">มูลค่ารายประเทศ</span>
+        <span data-v="contrib">ส่วนร่วมต่อการเติบโต</span>
+      </div>
+      <div class="ch" id="ch_ct"></div>
+      <div id="ct_note" style="font-size:11.5px;color:var(--muted);line-height:1.6;margin:2px 0 12px"></div>
+    </div>
+
+    <div class="chartbox">
+      <h3>รูปแบบตามฤดูกาล</h3>
+      <div class="cap" id="cap_sn"></div>
+      <div class="seg" id="sn_metric" style="max-width:360px;margin:8px 0 12px">
+        <span data-v="value" class="on">มูลค่า</span>
+        <span data-v="yoy">%YoY</span>
+        <span data-v="prev" id="sn_prev_lbl">%MoM</span>
+      </div>
+      <div class="ch" id="ch_sn"></div>
+      <div id="sn_note" style="font-size:11.5px;color:var(--muted);line-height:1.6;margin:2px 0 12px"></div>
+    </div>
+
+    <div class="chartbox">
+      <h3>ตลาดคู่ค้าสำคัญ 5 อันดับแรก</h3>
+      <div class="cap" id="cap_mkt"></div>
+      <div class="seg" id="mkt_scope" style="max-width:360px;margin:8px 0 10px">
+        <span data-v="last" class="on">งวดล่าสุด</span>
+        <span data-v="y12">12 เดือนล่าสุด</span>
+        <span data-v="all">ตลอดช่วงข้อมูล</span>
+      </div>
+      <div class="seg" id="mkt_metric" style="max-width:360px;margin:0 0 14px">
+        <span data-v="value" class="on">มูลค่า</span>
+        <span data-v="yoy">%YoY</span>
+        <span data-v="prev" id="mkt_prev_lbl">%MoM</span>
+      </div>
+      <div class="ch" id="ch_mkt" style="height:260px"></div>
+      <div id="mkt_note" style="font-size:11.5px;color:var(--muted);line-height:1.6;margin:4px 0 12px"></div>
+    </div>
+
+    <div class="chartbox">
+      <h3>การแยกองค์ประกอบการเปลี่ยนแปลงของมูลค่า</h3>
+      <div class="cap" id="cap_dc"></div>
+      <div class="ch" id="ch_dc"></div>
+      <div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin:2px 0 12px">
+        แท่งสีม่วงแสดงผลกระทบจากการเปลี่ยนแปลงด้านราคา แท่งสีเทาแสดงผลกระทบจากการเปลี่ยนแปลงด้านปริมาณ
+        และแท่งสีทองแสดงผลกระทบร่วมของทั้งสองปัจจัย ผลรวมของทั้งสามองค์ประกอบเท่ากับการเปลี่ยนแปลงของมูลค่าทั้งหมด
+        ตามสมการ Δมูลค่า = (Δราคา × ปริมาณงวดฐาน) + (Δปริมาณ × ราคางวดฐาน) + ผลกระทบร่วม
+      </div>
+    </div>
+
+    <div class="chartbox">
+      <h3>การเคลื่อนไหวของราคาต่อหน่วย</h3>
+      <div class="cap" id="cap_up"></div>
+      <div class="ch" id="ch_up"></div>
+    </div>
+
+    <div class="chartbox">
+      <h3>อัตราการเปลี่ยนแปลงของราคาและปริมาณ</h3>
+      <div class="cap" id="cap_gr"></div>
+      <div class="seg" id="g_basis" style="max-width:300px;margin:8px 0 12px">
+        <span data-v="prev" class="on">เทียบงวดก่อนหน้า</span>
+        <span data-v="yoy">เทียบช่วงเดียวกันของปีก่อน</span>
+      </div>
+      <div class="ch" id="ch_gr"></div>
+    </div>
+
+    <div class="toolbar"><h2>ตารางข้อมูล</h2>
+      <div class="right">
+        <span style="font-size:11.5px;color:var(--muted)" id="d_rowcount"></span>
+        <button id="d_csv_table">↓ Export CSV</button>
+      </div></div>
+    <div class="tablewrap show"><div class="scroll">
+      <table><thead id="d_thead"></thead><tbody id="d_tbody"></tbody></table></div></div>
+  </div>
+</div>
+
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const HOST = 'https://tradereport.moc.go.th/api';
+
+/* ============ CORS fallback ============ */
+const ROUTES = [
+  {name:'ยิงตรง', build:u=>u},
+  {name:'allorigins', build:u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u)},
+  {name:'corsproxy.io', build:u=>'https://corsproxy.io/?url='+encodeURIComponent(u)},
+  {name:'codetabs', build:u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u)},
+];
+let workingRoute = null;
+
+async function apiGet(url){
+  const order = workingRoute ? [workingRoute, ...ROUTES.filter(r=>r!==workingRoute)] : ROUTES;
+  let lastErr;
+  for(const r of order){
+    try{
+      const res = await fetch(r.build(url), {headers:{'Accept':'application/json'}});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const js = await res.json();
+      workingRoute = r;
+      return {data: js, route: r.name};
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('ทุกช่องทางล้มเหลว');
+}
+const asArr = j => Array.isArray(j) ? j : (j?.data || j?.result || j?.rows || []);
+const num = v => { const n = parseFloat(String(v ?? '').replace(/,/g,'')); return isFinite(n) ? n : 0; };
+
+/* ============ UNIT SYSTEM ============
+   com_code : หน่วยมากับ response เอง (unit2th)
+   hs_code  : หน่วยไม่มีใน response → ยกมาจากตาราง product search
+   ปัจจัยแปลงใช้เทียบราคาต่อหน่วยข้ามระดับให้อยู่บนฐานเดียวกัน
+====================================== */
+const WEIGHT_UNITS = {
+  'เมตริกตัน':{base:'kg', f:1000}, 'ตัน':{base:'kg', f:1000}, 'MT':{base:'kg', f:1000}, 'TNE':{base:'kg', f:1000},
+  'กิโลกรัม':{base:'kg', f:1}, 'KG':{base:'kg', f:1}, 'KGM':{base:'kg', f:1},
+};
+function unitInfo(label){
+  if(!label) return null;
+  const key = Object.keys(WEIGHT_UNITS).find(k => String(label).toUpperCase().includes(k.toUpperCase()));
+  return key ? {...WEIGHT_UNITS[key], label} : {base:null, f:1, label};
+}
+
+/* ============ PAGE 1 ============ */
+let rows = [], imex = '', armed = null;
+
+function setStatus(h){ $('status').innerHTML = h; }
+function showMsg(h){ $('msg').innerHTML=h; $('msg').classList.add('show'); }
+function hideMsg(){ $('msg').classList.remove('show'); }
+
+async function search(){
+  const kw = $('kw').value.trim();
+  if(kw.length < 2){ showMsg('กรุณาระบุคำค้นอย่างน้อย 2 ตัวอักษร'); return; }
+  hideMsg(); armed = null;
+  $('go').disabled=true; $('go').textContent='กำลังค้นหา...';
+  $('tablewrap').classList.remove('show'); $('toolbar').style.display='none';
+  $('hintbar').style.display='none'; $('empty').style.display='none';
+
+  const p = new URLSearchParams({keyword:kw, revision:$('rev').value, order_by:$('ord').value});
+  if(imex) p.set('imex_type', imex);
+
+  try{
+    setStatus('<span class="pill wait">กำลังดึง</span>');
+    const {data, route} = await apiGet(`${HOST}/products?${p}`);
+    rows = asArr(data);
+    setStatus(`<span class="pill ok">สำเร็จ</span> ${route} · ${rows.length} รายการ`);
+    if(!rows.length){
+      $('empty').style.display='block';
+      $('empty').innerHTML = `<div class="big">ไม่พบสินค้าที่สอดคล้องกับคำค้น "${kw}"</div><div>กรุณาปรับคำค้น หรือเปลี่ยนชุดพิกัดศุลกากร</div>`;
+      return;
+    }
+    renderList();
+  }catch(e){
+    setStatus(`<span class="pill err">ล้มเหลว</span> ${e.message}`);
+    showMsg(`<b>ไม่สามารถเรียกข้อมูลได้</b> — ${e.message}<br>หากเปิดไฟล์โดยตรงจากเครื่อง กรุณาเรียกใช้ผ่าน local server โดยรันคำสั่ง <code>python -m http.server 8000</code> แล้วเปิดที่ localhost`);
+  }finally{ $('go').disabled=false; $('go').textContent='ค้นหา'; }
+}
+
+function filtered(){
+  const L = $('hslen').value;
+  return L ? rows.filter(r=>String(r.hs_code||'').length===+L) : rows;
+}
+
+function renderList(){
+  const data = filtered(), mode = $('grp').value;
+  $('toolbar').style.display='flex'; $('tablewrap').classList.add('show');
+  $('hintbar').style.display='flex'; $('empty').style.display='none';
+
+  if(mode==='com'){
+    const m = new Map();
+    data.forEach(r=>{
+      const k=`${r.com_code}|${r.imex_type}`;
+      if(!m.has(k)) m.set(k,{...r,n:0,hs:[]});
+      const g=m.get(k); g.n++; g.hs.push(r.hs_code);
+    });
+    const gs=[...m.values()].sort((a,b)=>b.n-a.n);
+    $('resTitle').textContent=`ผลการค้นหา — ${gs.length} กลุ่มสินค้า`;
+    $('thead').innerHTML=`<tr><th>com_code</th><th>ประเภท</th><th>ชื่อกลุ่มสินค้า</th><th class="num">HS</th><th>ตัวอย่าง HS</th></tr>`;
+    $('tbody').innerHTML=gs.map((g,i)=>`<tr>
+      <td><span class="mono com pick" data-lvl="com" data-i="${i}" data-src="grp">${g.com_code}</span></td>
+      <td><span class="flag ${g.imex_type}">${g.imex_type==='export'?'ส่งออก':'นำเข้า'}</span></td>
+      <td class="desc">${g.com_description_th||'-'}<div class="en">${g.com_description_en||''}</div></td>
+      <td class="num">${g.n}</td>
+      <td style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted)">${g.hs.slice(0,4).join(', ')}${g.hs.length>4?' …':''}</td>
+    </tr>`).join('');
+    window.__groups = gs;
+  }else{
+    $('resTitle').textContent=`ผลการค้นหา — ${data.length} รายการ`;
+    $('thead').innerHTML=`<tr><th>hs_code</th><th>ประเภท</th><th>ชื่อสินค้า (HS)</th><th>com_code</th><th>กลุ่มสินค้า</th><th>หน่วย</th></tr>`;
+    $('tbody').innerHTML=data.map((r,i)=>`<tr>
+      <td><span class="mono hs pick" data-lvl="hs" data-i="${i}" data-src="flat">${r.hs_code||'-'}</span></td>
+      <td><span class="flag ${r.imex_type}">${r.imex_type==='export'?'ส่งออก':'นำเข้า'}</span></td>
+      <td class="desc">${r.hs_description_th||'-'}<div class="en">${r.hs_description_en||''}</div></td>
+      <td><span class="mono com pick" data-lvl="com" data-i="${i}" data-src="flat">${r.com_code||'-'}</span></td>
+      <td class="desc">${r.com_description_th||'-'}<div class="en">${r.com_description_en||''}</div></td>
+      <td style="color:var(--muted);font-size:11.5px">${r.unit||'-'}</td>
+    </tr>`).join('');
+    window.__flat = data;
+  }
+  bindPicks();
+}
+
+/* คลิกแรก = เลือกระดับ, คลิกซ้ำ = เปิดหน้า 2 */
+function bindPicks(){
+  document.querySelectorAll('.pick').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const sig = `${el.dataset.lvl}|${el.dataset.i}|${el.dataset.src}`;
+      if(armed === sig){ openDetail(el); return; }
+      document.querySelectorAll('.pick.armed').forEach(x=>x.classList.remove('armed'));
+      el.classList.add('armed'); armed = sig;
+    });
+  });
+}
+
+function openDetail(el){
+  const lvl = el.dataset.lvl, i = +el.dataset.i;
+  const row = el.dataset.src==='grp' ? window.__groups[i] : window.__flat[i];
+  const code = lvl==='hs' ? row.hs_code : row.com_code;
+
+  /* --- ที่มาของหน่วย: com จาก API ปลายทาง / hs จากตารางนี้ --- */
+  const subject = {
+    level: lvl, code,
+    flow: row.imex_type || imex || 'export',
+    nameTh: lvl==='hs' ? row.hs_description_th : row.com_description_th,
+    nameEn: lvl==='hs' ? row.hs_description_en : row.com_description_en,
+    comCode: row.com_code, hsCode: row.hs_code,
+    revision: row.revision || $('rev').value,
+    unitFromProduct: row.unit2th || row.unit || row.unit_code || null,
+  };
+  gotoDetail(subject);
+}
+
+/* ============ PAGE 2 ============ */
+let S = null, seriesRaw = [], chUp, chGr, chDc;
+
+function gotoDetail(subject){
+  S = subject;
+  $('view1').classList.remove('on'); $('view2').classList.add('on');
+  $('back').style.display='block';
+  $('hTitle').textContent = 'ข้อมูลการค้าย้อนหลัง';
+  $('hSub').textContent = 'มูลค่า ปริมาณ ราคาต่อหน่วย และโครงสร้างตลาดคู่ค้า';
+  window.scrollTo(0,0);
+
+  $('s_lvl').className = 'lvl '+subject.level;
+  $('s_lvl').textContent = subject.level==='hs' ? 'พิกัดศุลกากร (HS Code)' : 'กลุ่มสินค้า (MOC)';
+  $('s_code').className = 'mono '+subject.level;
+  $('s_code').textContent = subject.code;
+  $('s_name').textContent = subject.nameTh || subject.code;
+  $('s_flow').className = 'flag '+subject.flow;
+  $('s_flow').textContent = subject.flow==='export' ? 'ส่งออก' : 'นำเข้า';
+  $('s_meta').innerHTML = `${subject.nameEn||''}<br>
+    ชุดพิกัดปี ${subject.revision} ·
+    ${subject.level==='hs'
+      ? `อยู่ในกลุ่มสินค้า <code>${subject.comCode||'-'}</code> · หน่วยของปริมาณ: <b>${subject.unitFromProduct||'ไม่ระบุ'}</b>`
+      : `หน่วยของปริมาณจะได้มาจากข้อมูลการค้าโดยตรง`}`;
+
+  // ปี: default ย้อนหลัง 4 ปี
+  const nowY = new Date().getFullYear();
+  const y1s = $('d_y1'), y2s = $('d_y2');
+  y1s.innerHTML=''; y2s.innerHTML='';
+  for(let y=nowY; y>=2000; y--){
+    y1s.insertAdjacentHTML('beforeend', `<option value="${y}">${y}</option>`);
+    y2s.insertAdjacentHTML('beforeend', `<option value="${y}">${y}</option>`);
+  }
+  y1s.value = nowY-3; y2s.value = nowY;
+
+  $('d_flow').querySelectorAll('span').forEach(s=>s.classList.toggle('on', s.dataset.v===subject.flow));
+  $('d_result').style.display='none'; $('d_msg').classList.remove('show');
+  $('d_status').innerHTML = '<span style="color:var(--muted)">อยู่ระหว่างเรียกข้อมูลย้อนหลัง 4 ปี</span>';
+  fetchSeries();
+}
+
+$('back').addEventListener('click', ()=>{
+  $('view2').classList.remove('on'); $('view1').classList.add('on');
+  $('back').style.display='none';
+  $('hTitle').textContent='MOC Trade Explorer';
+  $('hSub').textContent='ระบบสืบค้นสินค้าและเรียกดูข้อมูลมูลค่า ปริมาณ และราคาต่อหน่วยย้อนหลัง';
+  armed = null; document.querySelectorAll('.pick.armed').forEach(x=>x.classList.remove('armed'));
+});
+
+
+/* ============ CACHE ============
+   คีย์ = endpoint|รหัส|ปี-เดือน|limit
+   ทำให้สลับ export/import หรือกลับมาดูรหัสเดิมไม่ต้องยิงซ้ำ
+   และเป็นเงื่อนไขที่ทำให้การเทียบสองทิศทางใช้งานได้จริง
+================================== */
+const CACHE = new Map();
+
+function epFor(level, flow){
+  return level==='hs' ? `${flow}harmonizecountries` : `${flow}commoditycountries`;
+}
+
+async function loadRows(level, code, flow, y1, y2, limit, onProgress){
+  const ep = epFor(level, flow);
+  const codeParam = level==='hs' ? 'hs_code' : 'com_code';
+  const now = new Date(), curY = now.getFullYear(), curM = now.getMonth()+1;
+
+  const tasks = [];
+  for(let y=y1; y<=y2; y++)
+    for(let m=1; m<=12; m++){
+      if(y > curY || (y===curY && m > curM)) continue;
+      tasks.push({y, m});
+    }
+
+  const out = []; let done=0, empty=0, hits=0; const failed=[];
+  const queue = [...tasks];
+
+  async function worker(){
+    while(queue.length){
+      const {y, m} = queue.shift();
+      const key = `${ep}|${code}|${y}-${m}|${limit}`;
+      let arr = CACHE.get(key);
+      if(arr !== undefined){ hits++; }
+      else{
+        const p = new URLSearchParams({year:y, month:m, [codeParam]:code, limit});
+        try{
+          const {data} = await apiGet(`${HOST}/${ep}?${p}`);
+          arr = asArr(data);
+          CACHE.set(key, arr);
+        }catch(e){ failed.push(`${y}-${String(m).padStart(2,'0')}`); arr = null; }
+      }
+      if(arr){
+        if(arr.length) arr.forEach(r => out.push({...r, year:r.year??y, month:r.month??m}));
+        else empty++;
+      }
+      done++;
+      onProgress && onProgress(done, tasks.length, ep);
+    }
+  }
+  await Promise.all(Array.from({length:4}, worker));
+  return {rows:out, total:tasks.length, empty, failed, hits, ep};
+}
+
+/* ตามสเปค MOC: year, month, (com_code|hs_code) เป็น required ทั้งหมด
+   limit default = 10 → ต้องระบุเองไม่งั้นได้ประเทศคู่ค้าไม่ครบ */
+async function fetchSeries(){
+  const flow = $('d_flow').querySelector('.on').dataset.v;
+  const y1 = +$('d_y1').value, y2 = +$('d_y2').value;
+  if(y1 > y2){ dmsg('ปีเริ่มต้นต้องไม่มากกว่าปีสิ้นสุด'); return; }
+  const limit = $('d_limit').value;
+
+  $('d_go').disabled=true; $('d_go').textContent='กำลังดึง...';
+  $('d_prog').classList.add('show'); $('d_msg').classList.remove('show');
+  $('d_progbar').style.width='0%';
+
+  const res = await loadRows(S.level, S.code, flow, y1, y2, limit,
+    (done, total, ep)=>{
+      $('d_progbar').style.width = (done/total*100)+'%';
+      $('d_status').innerHTML = `<span class="pill wait">กำลังดึง</span> ${ep} · ${done}/${total} เดือน`;
+    });
+
+  seriesRaw = res.rows;
+  $('d_go').disabled=false; $('d_go').textContent='ดึงข้อมูล';
+  setTimeout(()=>$('d_prog').classList.remove('show'), 400);
+
+  if(!seriesRaw.length){
+    $('d_status').innerHTML = `<span class="pill err">ไม่มีข้อมูล</span>`;
+    dmsg(`<b>API ไม่คืนข้อมูล</b> สำหรับ <code>${res.ep}?year=…&month=…&${S.level==='hs'?'hs_code':'com_code'}=${S.code}&limit=${limit}</code><br><br>
+      ยิงไป ${res.total} เดือน · ว่าง ${res.empty} · ผิดพลาด ${res.failed.length}<br>
+      ${S.level==='com' ? 'กรุณาตรวจสอบว่ารหัสกลุ่มสินค้าประกอบด้วยตัวเลข 9 หลักครบถ้วน' : 'รหัสพิกัดบางระดับอาจไม่มีข้อมูลรายเดือน กรุณาเลือกระดับ 4 หรือ 6 หลัก'}`);
+    $('d_result').style.display='none';
+    return;
+  }
+
+  $('d_status').innerHTML = `<span class="pill ok">สำเร็จ</span> ${seriesRaw.length} แถว · ` +
+    `${res.total - res.empty - res.failed.length}/${res.total} เดือนที่มีข้อมูล · จำกัดประเทศคู่ค้า ${limit} ราย/เดือน` +
+    (res.hits ? ` · <span style="color:var(--up)">ใช้ข้อมูลที่เรียกไว้แล้ว ${res.hits} เดือน</span>` : '') +
+    (res.failed.length ? ` · <span style="color:var(--down)">เรียกข้อมูลไม่สำเร็จ ${res.failed.length} เดือน</span>` : '');
+
+  if(limit === '10')
+    dmsg(`<b>ข้อมูลที่แสดงยังไม่ครบถ้วน</b> — ขณะนี้เรียกข้อมูลประเทศคู่ค้าเพียง 10 รายต่อเดือน
+      ประเทศส่วนที่เหลือไม่ถูกนำมารวม ส่งผลให้ยอดรวมและราคาต่อหน่วยต่ำกว่าความเป็นจริง
+      กรุณาปรับ "จำนวนประเทศคู่ค้าสูงสุดต่อเดือน" เป็น 500 เพื่อให้ได้ข้อมูลที่ครบถ้วน`);
+
+  buildDetail();
+}
+
+function dmsg(h){ $('d_msg').innerHTML=h; $('d_msg').classList.add('show'); }
+
+/* ---- สรุปหน่วย ---- */
+function resolveUnit(){
+  // com_code: จาก API (unit2th) / hs_code: จากตาราง product search
+  const fromApi = seriesRaw.find(r=>r.unit2th)?.unit2th || null;
+  const label = S.level==='com' ? fromApi : S.unitFromProduct;
+  const source = S.level==='com' ? 'ผลลัพธ์ API' : 'ตารางค้นหาสินค้า';
+
+  const withVal = seriesRaw.filter(r=>num(r.value_usd) > 0);
+  const hasQty = seriesRaw.some(r=>num(r.quantity) > 0);
+  // ตามสเปค MOC: quantity = 0 ทั้งที่มีมูลค่า = สินค้าย่อยใต้รหัสนี้ใช้หน่วยนับต่างกัน
+  const zeroQtyWithValue = withVal.filter(r=>num(r.quantity) === 0).length;
+  const mixedUnits = withVal.length > 0 && (zeroQtyWithValue / withVal.length) > 0.5;
+
+  return {label, source, hasQty, info: unitInfo(label),
+          mixedUnits, zeroQtyWithValue, valueRows: withVal.length};
+}
+
+function buildDetail(){
+  $('d_result').style.display='block';
+  const U = resolveUnit();
+
+  /* --- แถบแจ้งหน่วย --- */
+  const ub = $('d_unitbar');
+  if(U.mixedUnits){
+    ub.className='unitbar no';
+    $('d_unittext').innerHTML = `<b>ไม่สามารถคำนวณราคาต่อหน่วยของรหัสนี้ได้</b><br>
+      สินค้าที่จัดอยู่ภายใต้รหัสนี้ใช้หน่วยนับแตกต่างกัน เช่น บางรายการนับเป็นกิโลกรัม บางรายการนับเป็นชิ้น
+      กระทรวงพาณิชย์จึงไม่สามารถรวมปริมาณได้ และรายงานค่าปริมาณเป็น 0
+      (พบ ${U.zeroQtyWithValue} จาก ${U.valueRows} รายการ)<br>
+      <b>แนวทางแก้ไข:</b> ${S.level==='com'
+        ? 'กรุณาเลือกที่รหัสพิกัดศุลกากรแทน เนื่องจากรหัสพิกัดมักครอบคลุมสินค้าที่ใช้หน่วยนับเดียวกัน'
+        : 'กรุณาเลือกรหัสพิกัดในระดับที่ละเอียดกว่า เช่น 8 หรือ 11 หลัก'}`;
+  }else if(!U.hasQty){
+    ub.className='unitbar no';
+    $('d_unittext').innerHTML = `<b>ข้อมูลชุดนี้ไม่ปรากฏตัวเลขปริมาณ</b><br>
+      จึงไม่สามารถคำนวณราคาต่อหน่วยได้ ส่วนอื่นยังคงแสดงผลตามปกติ โดยจะแสดงเฉพาะข้อมูลมูลค่า`;
+  }else if(U.label){
+    ub.className='unitbar has';
+    $('d_unittext').innerHTML = `<b>สามารถคำนวณราคาต่อหน่วยได้ หน่วยนับคือ ${U.label}</b> (ที่มาของหน่วย: ${U.source})<br>
+      ราคาต่อหน่วยคำนวณจากมูลค่ารวมหารด้วยปริมาณรวมในแต่ละงวด มิใช่ค่าเฉลี่ยของราคารายประเทศ
+      จึงสะท้อนระดับราคาที่แท้จริง โดยไม่ให้น้ำหนักเกินควรแก่ประเทศที่มีปริมาณการค้าน้อย` +
+      (U.zeroQtyWithValue ? `<br><span style="color:#96700A">ข้อควรระวัง: พบ ${U.zeroQtyWithValue} รายการที่มีมูลค่าแต่ไม่มีปริมาณ รายการดังกล่าวถูกนับรวมในมูลค่าแต่ไม่ถูกนับในปริมาณ ราคาต่อหน่วยจึงอาจสูงกว่าความเป็นจริงเล็กน้อย</span>` : '');
+  }else{
+    ub.className='unitbar no';
+    $('d_unittext').innerHTML = `<b>ปรากฏตัวเลขปริมาณ แต่ไม่ระบุหน่วยนับ</b>
+      (${S.level==='com'?'ข้อมูลที่ได้รับไม่ได้ระบุหน่วยนับ':'ไม่พบหน่วยนับของรหัสนี้ในตารางสินค้า'})<br>
+      ระบบยังคงคำนวณราคาต่อหน่วยให้ แต่ไม่สามารถนำไปเปรียบเทียบกับสินค้าอื่นได้ เนื่องจากไม่ทราบฐานหน่วยนับ
+      จึงควรใช้เพื่อพิจารณาแนวโน้มเท่านั้น และไม่ควรนำระดับราคาไปอ้างอิง`;
+  }
+
+  /* --- ตัวเลือกหน่วยราคา --- */
+  const us = $('d_unit'); us.innerHTML='';
+  const base = U.label || 'หน่วยข้อมูลดิบ';
+  us.insertAdjacentHTML('beforeend', `<option value="1">USD ต่อ ${base}</option>`);
+  if(U.info?.base==='kg' && U.info.f===1000)
+    us.insertAdjacentHTML('beforeend', `<option value="0.001">USD ต่อ กิโลกรัม (แปลงจาก${base})</option>`);
+  if(U.info?.base==='kg' && U.info.f===1)
+    us.insertAdjacentHTML('beforeend', `<option value="1000">USD ต่อ เมตริกตัน (แปลงจาก${base})</option>`);
+
+  /* --- ตัวเลือกประเทศ --- */
+  const ctry = new Map();
+  seriesRaw.forEach(r=>{ if(r.country_code) ctry.set(r.country_code, r.country_name_th||r.country_name_en); });
+  const sel = $('d_ctry'), keep = sel.value;
+  sel.innerHTML = '<option value="">ทุกประเทศ (รวม)</option>' +
+    [...ctry.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'th'))
+      .map(([c,n])=>`<option value="${c}">${n} (${c})</option>`).join('');
+  if(keep) sel.value = keep;
+
+  renderDetail();
+}
+
+const FREQ = {
+  M:{n:12, label:'เดือน', key:(y,m)=>`${y}-${String(m).padStart(2,'0')}`},
+  Q:{n:4,  label:'ไตรมาส', key:(y,m)=>`${y}-Q${Math.ceil(m/3)}`},
+  H:{n:2,  label:'ครึ่งปี', key:(y,m)=>`${y}-H${m<=6?1:2}`},
+  Y:{n:1,  label:'ปี',     key:(y,m)=>`${y}`},
+};
+
+function aggregate(){
+  const c = $('d_ctry').value;
+  const f = FREQ[$('d_freq').value] || FREQ.M;
+  const src = c ? seriesRaw.filter(r=>r.country_code===c) : seriesRaw;
+
+  // ขั้นที่ 1 — รวมข้ามประเทศให้ได้ยอดรายเดือนก่อน
+  const monthly = new Map();
+  src.forEach(r=>{
+    const y = +r.year, mo = +r.month;
+    if(!y || !mo) return;
+    const k = `${y}-${String(mo).padStart(2,'0')}`;
+    if(!monthly.has(k)) monthly.set(k,{y, m:mo, value:0, qty:0, accValue:0, accQty:0});
+    const g = monthly.get(k);
+    g.value    += num(r.value_usd);
+    g.qty      += num(r.quantity);
+    g.accValue += num(r.acc_value_usd);
+    g.accQty   += num(r.acc_quantity);
+  });
+
+  // ขั้นที่ 2 — ยุบเดือนเข้ากลุ่มตามความถี่ที่เลือก
+  const out = new Map();
+  [...monthly.values()].sort((a,b)=>a.y-b.y||a.m-b.m).forEach(x=>{
+    const key = f.key(x.y, x.m);
+    if(!out.has(key)) out.set(key,{period:key, value:0, qty:0, accValue:0, accQty:0, nMonths:0});
+    const g = out.get(key);
+    g.value += x.value;
+    g.qty   += x.qty;
+    g.nMonths++;
+    // acc_* เป็นค่าสะสม YTD — ใช้ค่าของเดือนสุดท้ายในกลุ่ม ไม่ใช่ผลรวม
+    g.accValue = x.accValue;
+    g.accQty   = x.accQty;
+  });
+  const arr = [...out.values()].sort((a,b)=>a.period.localeCompare(b.period));
+  // ตัดงวดท้ายที่ยังไม่มีข้อมูลออก เพื่อไม่ให้แกน X ยาวเกินงวดล่าสุดที่มีข้อมูลจริง
+  let last = arr.length - 1;
+  while(last >= 0 && !(arr[last].value > 0) && !(arr[last].qty > 0)) last--;
+  return arr.slice(0, last + 1);
+}
+
+function renderDetail(){
+  const U = resolveUnit();
+  const conv = parseFloat($('d_unit').value || '1');
+  const unitLabel = $('d_unit').selectedOptions[0]?.textContent.replace('USD ต่อ ','').split(' (')[0] || 'หน่วย';
+  const f = FREQ[$('d_freq').value] || FREQ.M;
+  const s = aggregate();
+  if(!s.length) return;
+
+  // ราคาต่อหน่วยแบบถ่วงน้ำหนัก
+  s.forEach(x => {
+    x.p  = x.qty > 0 ? (x.value / x.qty) : null;   // ราคาดิบ ใช้ในการแยกผล
+    x.up = x.p == null ? null : x.p * conv;        // ราคาที่แสดง (แปลงหน่วยแล้ว)
+  });
+  computeGrowth(s, f);
+
+  /* --- การ์ด: ใช้ค่าล่าสุดที่ไม่เป็น 0 ของแต่ละตัวชี้วัด --- */
+  const lastNZ = key => {
+    for(let i=s.length-1; i>=0; i--){
+      const v = s[i][key];
+      if(v != null && v !== 0) return {i, v, period:s[i].period};
+    }
+    return null;
+  };
+  const pct = (a,b) => (b && b!==0) ? ((a-b)/Math.abs(b)*100) : null;
+
+  // เทียบกับงวดเดียวกันปีก่อน (offset ตามความถี่) ถ้าไม่มีค่อยเทียบงวดก่อนหน้า
+  function compare(key, hit){
+    if(!hit) return {v:null, tag:''};
+    const yaIdx = hit.i - f.n;
+    if(yaIdx >= 0 && s[yaIdx][key]) return {v: pct(hit.v, s[yaIdx][key]), tag:'YoY'};
+    for(let j=hit.i-1; j>=0; j--)
+      if(s[j][key]) return {v: pct(hit.v, s[j][key]), tag:'เทียบงวดก่อน'};
+    return {v:null, tag:''};
+  }
+  function setCard(valId, deltaId, hit, key, fmt, unitHtml){
+    const el = $(valId), dl = $(deltaId);
+    if(!hit){ el.innerHTML = `n/a<span class="un">ไม่มีข้อมูล</span>`; dl.textContent=''; dl.className='dl'; return; }
+    const stale = hit.i < s.length-1 ? ` <span class="un" style="color:var(--down)">(${hit.period})</span>` : '';
+    el.innerHTML = `${fmt(hit.v)}<span class="un">${unitHtml}</span>${stale}`;
+    const c = compare(key, hit);
+    if(c.v == null){ dl.textContent=''; dl.className='dl'; return; }
+    dl.textContent = `${c.v>=0?'▲':'▼'} ${Math.abs(c.v).toFixed(1)}% ${c.tag}`;
+    dl.className = 'dl ' + (c.v>=0?'pos':'neg');
+  }
+
+  const hVal = lastNZ('value'), hQty = lastNZ('qty'), hUp = lastNZ('up'), hYtd = lastNZ('accValue');
+  setCard('k_val','k_val_d', hVal, 'value', v=>(v/1e6).toFixed(2), 'ล้าน USD');
+  setCard('k_ytd','k_ytd_d', hYtd, 'accValue', v=>(v/1e6).toFixed(2), 'ล้าน USD');
+  setCard('k_qty','k_qty_d', hQty, 'qty',  v=>v.toLocaleString(undefined,{maximumFractionDigits:1}), U.label||'');
+  setCard('k_up','k_up_d',  hUp,  'up',   v=>v.toLocaleString(undefined,{maximumFractionDigits:3}), `USD/${unitLabel}`);
+  $('cap_up').textContent = `หน่วยเป็นดอลลาร์สหรัฐต่อ ${unitLabel} · คำนวณจากมูลค่ารวมหารด้วยปริมาณรวมในแต่ละงวด · ราย${f.label}` +
+    ($('d_ctry').value ? ` · เฉพาะ ${$('d_ctry').selectedOptions[0].textContent}` : ' · รวมทุกประเทศ');
+
+  const flow = $('d_flow').querySelector('.on').dataset.v;
+  const C = flow==='export' ? '#2E5C9E' : '#B5860B';
+  const per = s.map(x=>x.period);
+
+  /* chart: unit price */
+  if(!chUp) chUp = echarts.init($('ch_up'));
+  chUp.setOption({
+    color:['#6B4E9E'], grid:{left:66,right:20,top:20,bottom:52},
+    tooltip:{trigger:'axis', valueFormatter:v=>v==null?'n/a':Number(v).toLocaleString(undefined,{maximumFractionDigits:3})},
+    dataZoom: zoomCfg(per.length, f),
+    xAxis:{type:'category',data:s.map(x=>x.period),axisLabel:{fontSize:10.5,color:'#6B7889'},axisLine:{lineStyle:{color:'#E2E7EF'}}},
+    yAxis:{type:'value',scale:true,name:`USD/${unitLabel}`,nameTextStyle:{color:'#6B7889',fontSize:10.5},
+      axisLabel:{fontSize:10.5,color:'#6B7889'},splitLine:{lineStyle:{color:'#F1F3F7'}}},
+    series:[{type:'line',data:s.map(x=>x.up),smooth:.2,showSymbol:false,connectNulls:false,lineStyle:{width:2.5},
+      areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'#6B4E9E2E'},{offset:1,color:'#6B4E9E02'}]}}}]
+  });
+
+  /* table */
+  window.__agg = s; window.__aggMeta = {unitLabel, freq:f, U};
+  renderGrowth(s, f, unitLabel);
+  renderMarkets(f, s);
+  renderSeasonal(f, unitLabel);
+  renderCountryContribution(f, s);
+  $('d_rowcount').textContent = `${s.length} งวด (ราย${f.label})`;
+  // %การเติบโตในตาราง: prev = งวดก่อนหน้าตามความถี่ที่เลือก, yoy = งวดเดียวกันปีก่อน
+  const gcell = v => v==null ? '<td class="num">-</td>'
+    : `<td class="num ${v>=0?'pos':'neg'}">${v>=0?'+':''}${v.toFixed(1)}%</td>`;
+  const qLabel = f.key===FREQ.M.key ? 'MoM' : f.key===FREQ.Q.key ? 'QoQ'
+               : f.key===FREQ.H.key ? 'HoH' : 'YoY';
+
+  $('d_thead').innerHTML = `<tr><th>งวด</th><th class="num">มูลค่า (USD)</th>
+    <th class="num">มูลค่า %${qLabel}</th><th class="num">มูลค่า %YoY</th>
+    <th class="num">ปริมาณ${U.label?` (${U.label})`:''}</th>
+    <th class="num">ราคาต่อหน่วย (USD/${unitLabel})</th>
+    <th class="num">ราคา %${qLabel}</th><th class="num">ราคา %YoY</th>
+    <th class="num">มูลค่าสะสม YTD (USD)</th><th class="num">ปริมาณสะสม YTD</th></tr>`;
+  $('d_tbody').innerHTML = [...s].reverse().map(x=>`<tr>
+    <td>${x.period}${x.nMonths<f.n&&$('d_freq').value!=='M'?` <span style="color:var(--muted);font-size:10.5px">(${x.nMonths}/${f.n} ด.)</span>`:''}</td>
+    <td class="num">${x.value.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+    ${gcell(x.g?.prev?.value)}${gcell(x.g?.yoy?.value)}
+    <td class="num">${x.qty.toLocaleString(undefined,{maximumFractionDigits:3})}</td>
+    <td class="num">${x.up==null?'-':x.up.toLocaleString(undefined,{maximumFractionDigits:4})}</td>
+    ${gcell(x.g?.prev?.price)}${gcell(x.g?.yoy?.price)}
+    <td class="num">${x.accValue.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+    <td class="num">${x.accQty.toLocaleString(undefined,{maximumFractionDigits:3})}</td>
+  </tr>`).join('');
+  window.__tblMeta = {qLabel};
+}
+
+/* ---- events page 2 ---- */
+$('d_go').addEventListener('click', fetchSeries);
+$('d_flow').addEventListener('click', e=>{
+  const s=e.target.closest('span'); if(!s) return;
+  $('d_flow').querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); fetchSeries();
+});
+/* ============ การเติบโต + แยกผลราคา/ปริมาณ ============
+   เทียบสองเกณฑ์: งวดก่อนหน้า (prev) และงวดเดียวกันปีก่อน (yoy)
+   Δมูลค่า = (Δราคา × ปริมาณเดิม) + (Δปริมาณ × ราคาเดิม) + ผลร่วม
+   ใช้ราคาดิบ (x.p) ไม่ใช่ราคาที่แปลงหน่วยแล้ว เพื่อให้ผลรวมเท่ากับ Δมูลค่าจริง
+   หมายเหตุ: %การเติบโตไม่ขึ้นกับการแปลงหน่วย จึงใช้ราคาดิบได้เช่นกัน
+========================================================= */
+let growthBasis = 'prev';
+
+function computeGrowth(s, f){
+  const pc = (a,b) => (b && b!==0) ? ((a-b)/Math.abs(b)*100) : null;
+  s.forEach((x,i)=>{
+    x.g = {};
+    for(const [tag, base] of [['prev', s[i-1]], ['yoy', s[i-f.n]]]){
+      if(!base || !base.value){ x.g[tag] = null; continue; }
+      const g = { dValue: x.value - base.value, value: pc(x.value, base.value) };
+      if(x.p != null && base.p != null && base.qty > 0){
+        g.price  = pc(x.p, base.p);
+        g.qtyPct = pc(x.qty, base.qty);
+        g.ePrice = (x.p - base.p) * base.qty;
+        g.eQty   = (x.qty - base.qty) * base.p;
+        g.eInter = (x.p - base.p) * (x.qty - base.qty);
+      }
+      x.g[tag] = g;
+    }
+  });
+}
+
+/* หน้าต่างเริ่มต้นของ dataZoom: ย้อนหลัง 2 ปีจากงวดล่าสุดที่มีข้อมูล */
+function zoomCfg(n, f){
+  const want = (f && f.n ? f.n : 12) * 2;          // 2 ปีตามความถี่ที่เลือก
+  const start = n > want ? (1 - want / n) * 100 : 0;
+  return [{type:'inside', start, end:100},
+          {type:'slider', height:16, bottom:8, start, end:100}];
+}
+
+function renderGrowth(s, f, unitLabel){
+  const b = growthBasis;
+  const basisLabel = b==='prev' ? `เปรียบเทียบกับ${f.label}ก่อนหน้า` : `เปรียบเทียบกับช่วงเดียวกันของปีก่อน`;
+  const has = s.filter(x=>x.g?.[b]?.price != null);
+  $('cap_gr').textContent = `${basisLabel} · หน่วยเป็นร้อยละของการเปลี่ยนแปลง` +
+    (has.length ? ' — หากราคาปรับสูงขึ้นขณะที่ปริมาณลดลง แสดงว่าการขยายตัวของมูลค่ามาจากปัจจัยด้านราคาเป็นสำคัญ'
+                : ' · ข้อมูลปริมาณไม่เพียงพอ จึงแสดงเฉพาะการเปลี่ยนแปลงของมูลค่า');
+  $('cap_dc').textContent = `${basisLabel} · หน่วยเป็นดอลลาร์สหรัฐ`;
+
+  const per = s.map(x=>x.period);
+  if(!chGr) chGr = echarts.init($('ch_gr'));
+  chGr.setOption({
+    color:['#6B4E9E','#8C9AAE','#16243F'],
+    grid:{left:56,right:20,top:34,bottom:52},
+    legend:{data:['ราคาต่อหน่วย','ปริมาณ','มูลค่า'],top:0,textStyle:{fontSize:11}},
+    tooltip:{trigger:'axis', valueFormatter:v=>v==null?'n/a':Number(v).toFixed(1)+'%'},
+    dataZoom: zoomCfg(per.length, f),
+    xAxis:{type:'category',data:per,axisLabel:{fontSize:10.5,color:'#6B7889'},axisLine:{lineStyle:{color:'#E2E7EF'}}},
+    yAxis:{type:'value',name:'%',nameTextStyle:{color:'#6B7889',fontSize:10.5},
+      axisLabel:{fontSize:10.5,color:'#6B7889',formatter:'{value}%'},splitLine:{lineStyle:{color:'#F1F3F7'}}},
+    series:[
+      {name:'ราคาต่อหน่วย',type:'line',data:s.map(x=>x.g?.[b]?.price ?? null),smooth:.2,showSymbol:false,connectNulls:false,lineStyle:{width:2.5}},
+      {name:'ปริมาณ',type:'line',data:s.map(x=>x.g?.[b]?.qtyPct ?? null),smooth:.2,showSymbol:false,connectNulls:false,lineStyle:{width:2,type:'dashed'}},
+      {name:'มูลค่า',type:'line',data:s.map(x=>x.g?.[b]?.value ?? null),smooth:.2,showSymbol:false,connectNulls:false,lineStyle:{width:1.5,opacity:.7}},
+      {type:'line',data:per.map(()=>0),symbol:'none',lineStyle:{width:1,color:'#C8D0DC'},silent:true,tooltip:{show:false}}
+    ]
+  }, true);
+
+  if(!chDc) chDc = echarts.init($('ch_dc'));
+  chDc.setOption({
+    color:['#6B4E9E','#8C9AAE','#D9C48A','#16243F'],
+    grid:{left:66,right:20,top:34,bottom:52},
+    legend:{data:['ผลด้านราคา','ผลด้านปริมาณ','ผลร่วม','Δมูลค่ารวม'],top:0,textStyle:{fontSize:11}},
+    tooltip:{trigger:'axis', axisPointer:{type:'shadow'},
+      valueFormatter:v=>v==null?'n/a':(v/1e6).toFixed(2)+' ล้าน USD'},
+    dataZoom: zoomCfg(per.length, f),
+    xAxis:{type:'category',data:per,axisLabel:{fontSize:10.5,color:'#6B7889'},axisLine:{lineStyle:{color:'#E2E7EF'}}},
+    yAxis:{type:'value',name:'USD',nameTextStyle:{color:'#6B7889',fontSize:10.5},
+      axisLabel:{fontSize:10.5,color:'#6B7889',formatter:v=>(v/1e6).toFixed(1)+'M'},splitLine:{lineStyle:{color:'#F1F3F7'}}},
+    series:[
+      {name:'ผลด้านราคา',type:'bar',stack:'d',data:s.map(x=>x.g?.[b]?.ePrice ?? null),barMaxWidth:16},
+      {name:'ผลด้านปริมาณ',type:'bar',stack:'d',data:s.map(x=>x.g?.[b]?.eQty ?? null),barMaxWidth:16},
+      {name:'ผลร่วม',type:'bar',stack:'d',data:s.map(x=>x.g?.[b]?.eInter ?? null),barMaxWidth:16},
+      {name:'Δมูลค่ารวม',type:'line',data:s.map(x=>x.g?.[b]?.dValue ?? null),symbol:'circle',symbolSize:4,lineStyle:{width:1.5}}
+    ]
+  }, true);
+}
+
+/* ยุบแถวดิบชุดใดก็ได้ตามความถี่ */
+function aggregateRows(rowsIn, f){
+  const monthly = new Map();
+  rowsIn.forEach(r=>{
+    const y=+r.year, mo=+r.month; if(!y||!mo) return;
+    const k=`${y}-${String(mo).padStart(2,'0')}`;
+    if(!monthly.has(k)) monthly.set(k,{y,m:mo,value:0,qty:0});
+    const g=monthly.get(k);
+    g.value += num(r.value_usd); g.qty += num(r.quantity);
+  });
+  const out=new Map();
+  [...monthly.values()].sort((a,b)=>a.y-b.y||a.m-b.m).forEach(x=>{
+    const key=f.key(x.y,x.m);
+    if(!out.has(key)) out.set(key,{period:key,value:0,qty:0});
+    const g=out.get(key); g.value+=x.value; g.qty+=x.qty;
+  });
+  return [...out.values()].sort((a,b)=>a.period.localeCompare(b.period));
+}
+
+$('g_basis').addEventListener('click', e=>{
+  const s=e.target.closest('span'); if(!s) return;
+  $('g_basis').querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); growthBasis = s.dataset.v;
+  if(seriesRaw.length) renderDetail();
+});
+
+/* ============ โครงสร้างตลาดและส่วนร่วมต่อการเติบโต ============
+   ส่วนร่วมของประเทศ i ต่อการเติบโต (หน่วย: จุดร้อยละ)
+     = (มูลค่าประเทศ i งวดนี้ − มูลค่าประเทศ i งวดปีก่อน) ÷ มูลค่ารวมงวดปีก่อน × 100
+   ผลรวมของทุกประเทศเท่ากับอัตราการเติบโตรวมพอดี จึงอ่านได้ว่า
+   การเติบโตรวมมาจากตลาดใดเป็นสำคัญ และตลาดใดฉุดให้ลดลง
+================================================================= */
+let chCt, ctMode = 'level';
+const CT_COLORS = ['#2E5C9E','#6B4E9E','#1E8E5A','#B5860B','#B8C2D0'];
+
+function renderCountryContribution(f, agg){
+  // มูลค่ารายประเทศ × รายงวด
+  const per = agg.map(x=>x.period);
+  const idx = new Map(per.map((p,i)=>[p,i]));
+  const byC = new Map();
+  seriesRaw.forEach(r=>{
+    const y=+r.year, m=+r.month; if(!y||!m) return;
+    const key = f.key(y,m);
+    const i = idx.get(key); if(i === undefined) return;
+    const c = r.country_code || '??';
+    if(!byC.has(c)) byC.set(c,{code:c, name:r.country_name_th||r.country_name_en||c, v:new Array(per.length).fill(0), total:0});
+    const g = byC.get(c);
+    const v = num(r.value_usd);
+    g.v[i] += v; g.total += v;
+  });
+
+  const all = [...byC.values()].sort((a,b)=>b.total-a.total);
+  if(!all.length) return;
+  const top = all.slice(0,4);
+  const rest = all.slice(4);
+  const other = {name:`ประเทศอื่น (${rest.length} ประเทศ)`, v:new Array(per.length).fill(0)};
+  rest.forEach(g=>g.v.forEach((v,i)=>other.v[i]+=v));
+  const groups = rest.length ? [...top, other] : top;
+
+  const totals = per.map((_,i)=>groups.reduce((a,g)=>a+g.v[i],0));
+  const yoyTotal = per.map((_,i)=>{
+    const b = i - f.n;
+    return (b >= 0 && totals[b] > 0) ? (totals[i]-totals[b])/totals[b]*100 : null;
+  });
+
+  const isContrib = ctMode === 'contrib';
+  const series = groups.map((g,gi)=>({
+    name: g.name,
+    type: 'bar',
+    stack: 'c',
+    barMaxWidth: 22,
+    data: per.map((_,i)=>{
+      if(!isContrib) return +(g.v[i]/1e6).toFixed(3);
+      const b = i - f.n;
+      if(b < 0 || !(totals[b] > 0)) return null;
+      return +((g.v[i]-g.v[b])/totals[b]*100).toFixed(3);
+    }),
+    itemStyle:{color: CT_COLORS[gi % CT_COLORS.length]}
+  }));
+
+  // โหมดส่วนร่วม: เส้นการเติบโตรวมอยู่หน่วยเดียวกับแท่ง (จุดร้อยละ) จึงใช้แกนเดียวได้
+  // โหมดมูลค่า: แสดงเฉพาะแท่งมูลค่า ไม่มีเส้นและไม่มีแกนที่สอง
+  if(isContrib){
+    series.push({
+      name:'อัตราการเติบโตรวม (YoY)', type:'line',
+      data: yoyTotal.map(v=>v==null?null:+v.toFixed(2)),
+      symbol:'circle', symbolSize:4, connectNulls:false,
+      lineStyle:{width:2, color:'#16243F'}, itemStyle:{color:'#16243F'}, z:5
+    });
+  }else{
+    // เส้นมูลค่ารวม อยู่หน่วยเดียวกับแท่ง จึงใช้แกนเดียวกันได้
+    series.push({
+      name:'มูลค่ารวมทุกตลาด', type:'line',
+      data: totals.map(v=>+(v/1e6).toFixed(3)),
+      symbol:'circle', symbolSize:4,
+      lineStyle:{width:2, color:'#16243F'}, itemStyle:{color:'#16243F'}, z:5
+    });
+  }
+
+  if(!chCt) chCt = echarts.init($('ch_ct'));
+  chCt.setOption({
+    grid:{left:66, right:24, top:46, bottom:52},
+    legend:{data:[...groups.map(g=>g.name), isContrib?'อัตราการเติบโตรวม (YoY)':'มูลค่ารวมทุกตลาด'], top:0, type:'scroll', textStyle:{fontSize:11}},
+    tooltip:{trigger:'axis', axisPointer:{type:'shadow'},
+      formatter: params=>{
+        const head = `${params[0].axisValue}<br>`;
+        return head + params.filter(p=>p.value!=null).map(p=>{
+          const unit = p.seriesName.includes('YoY') ? '%'
+                     : isContrib ? ' จุดร้อยละ' : ' ล้าน USD';
+          return `${p.marker}${p.seriesName}: <b>${Number(p.value).toLocaleString(undefined,{maximumFractionDigits:2})}</b>${unit}`;
+        }).join('<br>');
+      }},
+    dataZoom: zoomCfg(per.length, f),
+    xAxis:{type:'category', data:per, axisLabel:{fontSize:10.5,color:'#6B7889'}, axisLine:{lineStyle:{color:'#E2E7EF'}}},
+    yAxis:{type:'value', name: isContrib ? 'จุดร้อยละ' : 'ล้าน USD',
+       nameTextStyle:{color:'#6B7889',fontSize:10.5},
+       axisLabel:{fontSize:10.5,color:'#6B7889'}, splitLine:{lineStyle:{color:'#F1F3F7'}}},
+    series
+  }, true);
+
+  const shareTop = totals.reduce((a,b)=>a+b,0);
+  const topShare = shareTop > 0 ? top.reduce((a,g)=>a+g.total,0)/shareTop*100 : 0;
+  $('cap_ct').textContent = isContrib
+    ? `ส่วนร่วมของแต่ละตลาดต่ออัตราการเติบโตรวม เทียบกับช่วงเดียวกันของปีก่อน · ราย${f.label}`
+    : `มูลค่าการค้าจำแนกตามตลาดคู่ค้า 4 อันดับแรกและตลาดอื่น · ราย${f.label}`;
+
+  $('ct_note').innerHTML = isContrib
+    ? `แท่งแต่ละสีแสดงส่วนร่วมของตลาดนั้นต่อการเติบโตรวม หน่วยเป็นจุดร้อยละ
+       ผลรวมของทุกแท่งในงวดหนึ่งเท่ากับอัตราการเติบโตรวมของงวดนั้น (เส้นสีน้ำเงินเข้ม)
+       แท่งที่อยู่ใต้เส้นศูนย์คือตลาดที่ฉุดให้การเติบโตลดลง
+       · ${f.n} งวดแรกไม่มีข้อมูลเปรียบเทียบ จึงไม่แสดงค่า`
+    : `ตลาด 4 อันดับแรกมีสัดส่วนรวมร้อยละ ${topShare.toFixed(1)} ของมูลค่าทั้งหมด
+       · เส้นสีน้ำเงินเข้มคือมูลค่ารวมทุกตลาด ซึ่งเท่ากับความสูงรวมของแท่งในงวดนั้น
+       · การจัดอันดับใช้มูลค่ารวมตลอดช่วง จึงคงที่ทุกงวดเพื่อให้เปรียบเทียบข้ามเวลาได้`;
+}
+
+$('ct_mode').addEventListener('click', e=>{
+  const s = e.target.closest('span'); if(!s) return;
+  $('ct_mode').querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); ctMode = s.dataset.v;
+  if(seriesRaw.length) renderDetail();
+});
+
+/* ============ รูปแบบตามฤดูกาล ============
+   แกน X = เดือนหรือไตรมาสภายในปี · แต่ละเส้น = หนึ่งปีปฏิทิน
+   ความถี่ครึ่งปีและรายปีมีจุดน้อยเกินกว่าจะเห็นรูปแบบ จึงถอยกลับไปใช้รายเดือน
+========================================================= */
+let chSn, snMetric = 'value';
+const SN_COLORS = ['#C8D0DC','#9FB0C6','#6B8CB8','#2E5C9E','#16243F','#6B4E9E','#1E8E5A'];
+
+function renderSeasonal(f, unitLabel){
+  const useQ = f.key === FREQ.Q.key;               // รายไตรมาสใช้ 4 จุด นอกนั้นใช้ 12 เดือน
+  const nSlot = useQ ? 4 : 12;
+  const slotOf = m => useQ ? Math.ceil(m/3) : m;
+  const slotLabels = useQ ? ['Q1','Q2','Q3','Q4']
+    : ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+  // มูลค่ารวมทุกประเทศ แยกตามปี × ช่อง
+  const c = $('d_ctry').value;
+  const src = c ? seriesRaw.filter(r=>r.country_code===c) : seriesRaw;
+  const byYear = new Map();
+  src.forEach(r=>{
+    const y=+r.year, m=+r.month; if(!y||!m) return;
+    if(!byYear.has(y)) byYear.set(y, new Array(nSlot).fill(0));
+    byYear.get(y)[slotOf(m)-1] += num(r.value_usd);
+  });
+  const years = [...byYear.keys()].sort((a,b)=>a-b);
+  if(!years.length) return;
+
+  // ตัดช่องท้ายของปีล่าสุดที่ยังไม่มีข้อมูล ไม่ให้เส้นดิ่งลงศูนย์
+  const lastY = years[years.length-1];
+  const lv = byYear.get(lastY);
+  let lastSlot = nSlot-1; while(lastSlot>=0 && !(lv[lastSlot]>0)) lastSlot--;
+
+  const prevTag = useQ ? 'QoQ' : 'MoM';
+  const metricName = snMetric==='value' ? 'มูลค่า (ล้าน USD)'
+                   : snMetric==='yoy' ? '%YoY' : `%${prevTag}`;
+
+  const series = years.map((y,yi)=>{
+    const cur = byYear.get(y), prevYear = byYear.get(y-1);
+    const data = cur.map((v,si)=>{
+      if(y===lastY && si>lastSlot) return null;
+      if(snMetric==='value') return +(v/1e6).toFixed(3);
+      if(snMetric==='yoy'){
+        const b = prevYear ? prevYear[si] : 0;
+        return b>0 ? +((v-b)/b*100).toFixed(2) : null;
+      }
+      // เทียบช่องก่อนหน้า ข้ามปีได้ (ม.ค. เทียบกับ ธ.ค. ปีก่อน)
+      const b = si>0 ? cur[si-1] : (prevYear ? prevYear[nSlot-1] : 0);
+      return b>0 ? +((v-b)/b*100).toFixed(2) : null;
+    });
+    const isLast = yi===years.length-1;
+    return {
+      name:String(y), type:'line', data, connectNulls:false,
+      symbol:'circle', symbolSize:isLast?5:3,
+      lineStyle:{width:isLast?2.8:1.6},
+      itemStyle:{color: SN_COLORS[Math.max(0, SN_COLORS.length - years.length + yi)] || '#9FB0C6'},
+      z: isLast?5:2
+    };
+  });
+
+  if(snMetric!=='value')
+    series.push({type:'line', data:new Array(nSlot).fill(0), symbol:'none',
+      lineStyle:{width:1,color:'#C8D0DC'}, silent:true, tooltip:{show:false}, name:''});
+
+  if(!chSn) chSn = echarts.init($('ch_sn'));
+  chSn.setOption({
+    grid:{left:66,right:24,top:34,bottom:34},
+    legend:{data:years.map(String), top:0, type:'scroll', textStyle:{fontSize:11}},
+    tooltip:{trigger:'axis', valueFormatter:v=>v==null?'n/a':
+      Number(v).toLocaleString(undefined,{maximumFractionDigits:2}) + (snMetric==='value'?' ล้าน USD':'%')},
+    xAxis:{type:'category', data:slotLabels, boundaryGap:false,
+      axisLabel:{fontSize:10.5,color:'#6B7889'}, axisLine:{lineStyle:{color:'#E2E7EF'}}},
+    yAxis:{type:'value', scale:snMetric!=='value', name:metricName,
+      nameTextStyle:{color:'#6B7889',fontSize:10.5},
+      axisLabel:{fontSize:10.5,color:'#6B7889', formatter: snMetric==='value'?'{value}':'{value}%'},
+      splitLine:{lineStyle:{color:'#F1F3F7'}}},
+    series
+  }, true);
+
+  $('sn_metric').querySelector('[data-v="prev"]').textContent = `%${prevTag}`;
+  $('cap_sn').textContent = `เปรียบเทียบรูปแบบภายในปีของแต่ละปี · แกนนอนเป็น${useQ?'ไตรมาส':'เดือน'} · ` +
+    (c ? `เฉพาะ ${$('d_ctry').selectedOptions[0].textContent}` : 'รวมทุกประเทศ') +
+    (f.key===FREQ.H.key||f.key===FREQ.Y.key ? ' · ความถี่ที่เลือกมีจุดน้อยเกินไป จึงแสดงเป็นรายเดือนแทน' : '');
+  $('sn_note').innerHTML = snMetric==='value'
+    ? `เส้นที่หนาที่สุดคือปีล่าสุด หากเส้นของทุกปีมีจุดสูงต่ำในช่วงเดียวกัน แสดงว่าสินค้ามีรูปแบบตามฤดูกาลชัดเจน
+       และควรใช้การเปรียบเทียบแบบ %YoY มากกว่า %${prevTag} ในการประเมินแนวโน้ม`
+    : `เส้นแนวนอนที่ระดับศูนย์คือจุดที่ไม่มีการเปลี่ยนแปลง · ${snMetric==='yoy'
+        ? 'การเทียบกับช่วงเดียวกันของปีก่อนตัดผลของฤดูกาลออกไปแล้ว จึงสะท้อนแนวโน้มที่แท้จริง'
+        : `การเทียบกับ${useQ?'ไตรมาส':'เดือน'}ก่อนหน้ายังมีผลของฤดูกาลปะปนอยู่ ควรอ่านคู่กับ %YoY`}`;
+}
+
+$('sn_metric').addEventListener('click', e=>{
+  const s = e.target.closest('span'); if(!s) return;
+  $('sn_metric').querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); snMetric = s.dataset.v;
+  if(seriesRaw.length) renderDetail();
+});
+
+/* ============ ตลาดคู่ค้าสำคัญ 5 อันดับแรก ============
+   จัดอันดับด้วยมูลค่าเสมอ ไม่ว่าจะเลือกแสดงตัวชี้วัดใด
+   เพื่อให้ชุดประเทศคงที่ และไม่ให้ตลาดเล็กที่โตแรงขึ้นมาแทนที่ตลาดหลัก
+========================================================= */
+let chMkt, mktScope = 'last', mktMetric = 'value';
+
+function monthsInScope(f, agg){
+  const all = [...new Set(seriesRaw.map(r=>`${r.year}-${String(r.month).padStart(2,'0')}`))].sort();
+  if(mktScope === 'y12') return {set:new Set(all.slice(-12)), label:'12 เดือนล่าสุด'};
+
+  if(mktScope === 'last' && agg.length){
+    for(let i = agg.length-1; i >= 0; i--){
+      const key = agg[i].period;
+      const ms = all.filter(ym=>{
+        const [y,m] = ym.split('-').map(Number);
+        return f.key(y,m) === key;
+      });
+      if(!ms.length) continue;
+      const set = new Set(ms);
+      const has = seriesRaw.some(r =>
+        set.has(`${r.year}-${String(r.month).padStart(2,'0')}`) && num(r.value_usd) > 0);
+      if(has){
+        const stale = i < agg.length-1;
+        return {set, key, label: stale
+          ? `งวดล่าสุดที่มีข้อมูล (${key}) — งวดหลังจากนี้ยังไม่มีข้อมูล`
+          : `งวดล่าสุด (${key})`};
+      }
+    }
+    return {set:new Set(all), label:'ไม่พบงวดที่มีข้อมูล จึงแสดงตลอดช่วงข้อมูล'};
+  }
+  return {set:new Set(all), label:'ตลอดช่วงข้อมูล'};
+}
+
+// มูลค่ารายประเทศในชุดเดือนที่กำหนด
+function valueByCountry(monthSet){
+  const m = new Map();
+  seriesRaw.forEach(r=>{
+    const ym = `${r.year}-${String(r.month).padStart(2,'0')}`;
+    if(!monthSet.has(ym)) return;
+    const c = r.country_code || '??';
+    if(!m.has(c)) m.set(c, {code:c, name:r.country_name_th||r.country_name_en||c, value:0});
+    m.get(c).value += num(r.value_usd);
+  });
+  return m;
+}
+
+// เลื่อนชุดเดือนไปข้างหลัง n เดือน เพื่อสร้างฐานเปรียบเทียบ
+function shiftMonths(monthSet, n){
+  const out = new Set();
+  monthSet.forEach(ym=>{
+    let [y,m] = ym.split('-').map(Number);
+    m -= n; while(m <= 0){ m += 12; y -= 1; }
+    out.add(`${y}-${String(m).padStart(2,'0')}`);
+  });
+  return out;
+}
+
+function renderMarkets(f, agg){
+  const sc = monthsInScope(f, agg);
+  const cur = valueByCountry(sc.set);
+  if(!cur.size) return;
+
+  // จัดอันดับด้วยมูลค่าเสมอ
+  const top = [...cur.values()].sort((a,b)=>b.value-a.value).slice(0,5);
+  const totVal = [...cur.values()].reduce((a,x)=>a+x.value,0);
+  const t5 = top.reduce((a,x)=>a+x.value,0);
+
+  const prevTag = f.key===FREQ.Q.key ? 'QoQ' : f.key===FREQ.H.key ? 'HoH'
+                : f.key===FREQ.Y.key ? 'YoY' : 'MoM';
+  const nMonths = sc.set.size;
+  const baseYoy  = valueByCountry(shiftMonths(sc.set, 12));
+  const basePrev = valueByCountry(shiftMonths(sc.set, nMonths));
+
+  const isPct = mktMetric !== 'value';
+  const base = mktMetric==='yoy' ? baseYoy : basePrev;
+  const rows = top.map(x=>{
+    if(!isPct) return {...x, plot: x.value};
+    const b = base.get(x.code)?.value || 0;
+    return {...x, plot: b>0 ? (x.value-b)/b*100 : null, base:b};
+  }).reverse();   // ECharts วาดแท่งแนวนอนจากล่างขึ้นบน
+
+  const flow = $('d_flow').querySelector('.on').dataset.v;
+  const C = flow==='export' ? '#2E5C9E' : '#B5860B';
+  const fVal = v => v>=1e6 ? (v/1e6).toFixed(1)+'M' : v>=1e3 ? (v/1e3).toFixed(0)+'K' : v.toFixed(0);
+  const fPct = v => (v>=0?'+':'')+v.toFixed(1)+'%';
+
+  if(!chMkt) chMkt = echarts.init($('ch_mkt'));
+  chMkt.setOption({
+    grid:{left:10, right:70, top:10, bottom:10, containLabel:true},
+    tooltip:{trigger:'item', formatter:p=>{
+      const r = rows[p.dataIndex];
+      if(!isPct) return `${r.name}<br><b>${r.value.toLocaleString(undefined,{maximumFractionDigits:0})}</b> USD` +
+        `<br>สัดส่วน ${totVal>0?(r.value/totVal*100).toFixed(1):'0'}%`;
+      return `${r.name}<br>งวดนี้ <b>${r.value.toLocaleString(undefined,{maximumFractionDigits:0})}</b> USD` +
+        `<br>งวดฐาน ${r.base.toLocaleString(undefined,{maximumFractionDigits:0})} USD` +
+        `<br>เปลี่ยนแปลง <b>${r.plot==null?'n/a':fPct(r.plot)}</b>`;
+    }},
+    xAxis:{type:'value', axisLabel:{show:false}, splitLine:{show:false}, axisLine:{show:false}},
+    yAxis:{type:'category', data:rows.map(x=>x.name),
+      axisLabel:{fontSize:11.5, color:'#1C2733', width:120, overflow:'truncate'},
+      axisLine:{show:false}, axisTick:{show:false}},
+    series:[{type:'bar', data:rows.map(x=>x.plot), barMaxWidth:24,
+      itemStyle:{borderRadius:[0,4,4,0],
+        color: p => isPct ? (p.value>=0 ? '#1E8E5A' : '#C0392B') : C},
+      label:{show:true, position:'right', fontSize:11, color:'#6B7889',
+        formatter:p=>p.value==null?'n/a':(isPct?fPct(p.value):fVal(p.value))}}]
+  }, true);
+
+  $('mkt_metric').querySelector('[data-v="prev"]').textContent = `%${prevTag}`;
+  const metricLabel = mktMetric==='value' ? 'มูลค่า'
+                    : mktMetric==='yoy' ? 'อัตราการเปลี่ยนแปลงเทียบปีก่อน' : `อัตราการเปลี่ยนแปลงเทียบงวดก่อน`;
+  $('cap_mkt').textContent = `${sc.label} · แสดง${metricLabel} · การจัดอันดับใช้มูลค่าเสมอ ` +
+    `และพิจารณาทุกประเทศโดยไม่ขึ้นกับประเทศที่เลือกไว้ข้างต้น`;
+
+  let note = `ตลาด 5 อันดับแรกมีสัดส่วนรวมร้อยละ ${totVal>0?(t5/totVal*100).toFixed(1):'0'} ของมูลค่าทั้งหมด` +
+    (totVal>0 && t5/totVal > 0.8 ? ' ซึ่งสะท้อนการกระจุกตัวของตลาดในระดับสูง' : '');
+  if(isPct) note += ` · ลำดับของประเทศยังคงเรียงตามมูลค่า มิได้เรียงตามอัตราการเปลี่ยนแปลง` +
+    ` · ค่าที่แสดงว่า n/a หมายถึงงวดฐานไม่มีการค้ากับตลาดนั้น`;
+  $('mkt_note').innerHTML = note;
+}
+
+$('mkt_scope').addEventListener('click', e=>{
+  const s = e.target.closest('span'); if(!s) return;
+  $('mkt_scope').querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); mktScope = s.dataset.v;
+  if(seriesRaw.length) renderDetail();
+});
+$('mkt_metric').addEventListener('click', e=>{
+  const s = e.target.closest('span'); if(!s) return;
+  $('mkt_metric').querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); mktMetric = s.dataset.v;
+  if(seriesRaw.length) renderDetail();
+});
+
+['d_ctry','d_unit','d_freq'].forEach(id=>$(id).addEventListener('change', renderDetail));
+$('d_limit').addEventListener('change', ()=>{ if(seriesRaw.length) fetchSeries(); });
+
+/* ---------- CSV ---------- */
+// ตัวเลขไม่ใส่ quote เพื่อให้ Excel อ่านเป็นตัวเลขทันที / ข้อความ escape ตามมาตรฐาน
+function cell(v){
+  if(v === null || v === undefined || v === '') return '';
+  if(typeof v === 'number') return isFinite(v) ? String(v) : '';
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+function toCsv(headers, records){
+  return '\uFEFF' + headers.join(',') + '\n' +
+    records.map(r => r.map(cell).join(',')).join('\n') + '\n';
+}
+function download(name, text){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:'text/csv;charset=utf-8'}));
+  a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+function fileStem(){
+  const flow = $('d_flow').querySelector('.on').dataset.v;
+  const ctry = $('d_ctry').value || 'ALL';
+  const name = (S.nameTh||'').replace(/[\\/:*?"<>|\s]+/g,'_').slice(0,40);
+  return `MOC_${flow}_${S.level}_${S.code}_${ctry}${name?'_'+name:''}`;
+}
+
+// 1) อนุกรมเวลาตามความถี่ที่เลือก — พร้อมใช้ต่อทันที
+$('d_csv').addEventListener('click', ()=>{
+  const s = window.__agg;
+  if(!s || !s.length) return;
+  const {unitLabel, freq, U} = window.__aggMeta;
+  const flow = $('d_flow').querySelector('.on').dataset.v;
+  const ctry = $('d_ctry').value;
+  const ctryName = ctry ? $('d_ctry').selectedOptions[0].textContent : 'ทุกประเทศ (รวม)';
+
+  const headers = ['period','freq','level','code','product_name_th','flow','country_code','country_name',
+                   'value_usd','quantity','unit','unit_price_usd_per_unit','unit_price_unit',
+                   'acc_value_usd_ytd','acc_quantity_ytd','months_in_period',
+                   'value_growth_prev_pct','price_growth_prev_pct','qty_growth_prev_pct',
+                   'value_growth_yoy_pct','price_growth_yoy_pct','qty_growth_yoy_pct',
+                   'price_effect_usd','volume_effect_usd','interaction_usd','effect_basis'];
+  const recs = s.map(x=>[
+    x.period, freq.label, S.level, S.code, S.nameTh||'', flow,
+    ctry||'', ctryName,
+    round(x.value,2), round(x.qty,3), U.label||'',
+    x.up==null?'':round(x.up,6), `USD/${unitLabel}`,
+    round(x.accValue,2), round(x.accQty,3), x.nMonths,
+    round(x.g?.prev?.value,2), round(x.g?.prev?.price,2), round(x.g?.prev?.qtyPct,2),
+    round(x.g?.yoy?.value,2),  round(x.g?.yoy?.price,2),  round(x.g?.yoy?.qtyPct,2),
+    round(x.g?.[growthBasis]?.ePrice,2), round(x.g?.[growthBasis]?.eQty,2),
+    round(x.g?.[growthBasis]?.eInter,2),
+    growthBasis==='prev' ? 'previous_period' : 'year_ago'
+  ]);
+  download(`${fileStem()}_${$('d_freq').value}.csv`, toCsv(headers, recs));
+});
+
+// 2) ข้อมูลดิบรายประเทศรายเดือน — ตัด value_baht / acc_value_baht ออกตามที่กำหนด
+$('d_csv_raw').addEventListener('click', ()=>{
+  if(!seriesRaw.length) return;
+  const flow = $('d_flow').querySelector('.on').dataset.v;
+  const U = resolveUnit();
+  const headers = ['year','month','period','level','code','product_name_th','flow',
+                   'country_code','country_name_th','country_name_en',
+                   'quantity','unit','acc_quantity','value_usd','acc_value_usd'];
+  const recs = [...seriesRaw]
+    .sort((a,b)=> (+a.year)-(+b.year) || (+a.month)-(+b.month) ||
+                  String(a.country_code).localeCompare(String(b.country_code)))
+    .map(r=>[
+      +r.year, +r.month, `${r.year}-${String(r.month).padStart(2,'0')}`,
+      S.level, S.code, S.nameTh||'', flow,
+      r.country_code||'', r.country_name_th||'', r.country_name_en||'',
+      round(num(r.quantity),3), r.unit2th || U.label || '', round(num(r.acc_quantity),3),
+      round(num(r.value_usd),2), round(num(r.acc_value_usd),2)
+    ]);
+  download(`${fileStem()}_raw.csv`, toCsv(headers, recs));
+});
+// 3) ตารางข้อมูลตามที่แสดงบนหน้าจอ — คอลัมน์และลำดับตรงกับที่เห็น
+$('d_csv_table').addEventListener('click', ()=>{
+  const s = window.__agg;
+  if(!s || !s.length) return;
+  const {unitLabel, freq, U} = window.__aggMeta;
+  const q = (window.__tblMeta||{}).qLabel || 'MoM';
+  const headers = ['งวด', 'มูลค่า (USD)', `มูลค่า %${q}`, 'มูลค่า %YoY',
+                   `ปริมาณ${U.label?` (${U.label})`:''}`,
+                   `ราคาต่อหน่วย (USD/${unitLabel})`, `ราคา %${q}`, 'ราคา %YoY',
+                   'มูลค่าสะสม YTD (USD)', 'ปริมาณสะสม YTD'];
+  const recs = [...s].reverse().map(x=>[
+    x.period,
+    round(x.value,2),
+    round(x.g?.prev?.value,2), round(x.g?.yoy?.value,2),
+    round(x.qty,3),
+    x.up==null ? '' : round(x.up,4),
+    round(x.g?.prev?.price,2), round(x.g?.yoy?.price,2),
+    round(x.accValue,2),
+    round(x.accQty,3)
+  ]);
+  download(`${fileStem()}_${$('d_freq').value}_ตาราง.csv`, toCsv(headers, recs));
+});
+
+function round(v, d){ return v==null||!isFinite(v) ? '' : +(+v).toFixed(d); }
+window.addEventListener('resize',()=>{ [chUp,chGr,chDc,chCt,chSn,chMkt].forEach(c=>c&&c.resize()); });
+
+/* ============ กรอกรหัสเอง → ไปหน้า 2 โดยตรง ============
+   กรณีนี้ไม่มีแถวจากตารางค้นหา จึงพยายามหา metadata (ชื่อสินค้า + หน่วย) ให้ก่อน
+   สำคัญกับ hs_code เป็นพิเศษ เพราะ series endpoint ของ HS ไม่ส่งหน่วยกลับมา
+====================================================== */
+let jumpLvl = 'hs', jumpFlow = 'export';
+
+async function lookupCode(level, code, flow){
+  const field = level==='hs' ? 'hs_code' : 'com_code';
+  const p = new URLSearchParams({keyword:code, revision:$('rev').value, order_by:'hs_code'});
+  if(flow) p.set('imex_type', flow);
+  try{
+    const {data} = await apiGet(`${HOST}/products?${p}`);
+    const arr = asArr(data);
+    // ตรงเป๊ะก่อน ถ้าไม่มีค่อยเอาแถวที่รหัสขึ้นต้นด้วยค่าที่กรอก
+    return arr.find(r => String(r[field]) === String(code))
+        || arr.find(r => String(r[field]||'').startsWith(String(code)))
+        || null;
+  }catch(e){ return null; }
+}
+
+async function jumpToCode(){
+  const code = $('j_code').value.trim().replace(/\s+/g,'');
+  const st = $('j_status');
+  if(!code){ st.innerHTML = '<span style="color:var(--down)">กรุณาระบุรหัสสินค้า</span>'; return; }
+  if(!/^\d+$/.test(code)){ st.innerHTML = '<span style="color:var(--down)">รหัสสินค้าต้องประกอบด้วยตัวเลขเท่านั้น</span>'; return; }
+  if(jumpLvl==='com' && code.length !== 9){
+    st.innerHTML = `<span style="color:var(--down)">รหัสกลุ่มสินค้าต้องประกอบด้วยตัวเลข 9 หลัก แต่ที่ระบุมามี ${code.length} หลัก</span>`;
+    return;
+  }
+
+  $('j_go').disabled = true; $('j_go').textContent = 'กำลังตรวจสอบ...';
+  st.textContent = 'อยู่ระหว่างสืบค้นข้อมูลสินค้าของรหัสดังกล่าว';
+  const hit = await lookupCode(jumpLvl, code, jumpFlow);
+  $('j_go').disabled = false; $('j_go').textContent = 'เรียกดูข้อมูล';
+
+  const subject = {
+    level: jumpLvl, code, flow: jumpFlow,
+    nameTh: hit ? (jumpLvl==='hs' ? hit.hs_description_th : hit.com_description_th) : null,
+    nameEn: hit ? (jumpLvl==='hs' ? hit.hs_description_en : hit.com_description_en) : null,
+    comCode: hit?.com_code || (jumpLvl==='com' ? code : null),
+    hsCode:  hit?.hs_code  || (jumpLvl==='hs'  ? code : null),
+    revision: hit?.revision || $('rev').value,
+    unitFromProduct: hit ? (hit.unit2th || hit.unit || hit.unit_code || null) : null,
+    manual: true, matched: !!hit,
+  };
+
+  if(!hit && jumpLvl==='hs'){
+    st.innerHTML = `<span style="color:#96700A">ไม่พบรหัสนี้ในตารางสินค้า ระบบจะเปิดหน้าข้อมูลให้
+      แต่จะไม่ทราบหน่วยนับของปริมาณ ราคาต่อหน่วยจึงใช้พิจารณาแนวโน้มได้ แต่ไม่สามารถเปรียบเทียบกับสินค้าอื่น</span>`;
+  }else if(!hit){
+    st.innerHTML = `<span style="color:#96700A">ไม่พบรหัสนี้ในตารางสินค้า ระบบจะเปิดหน้าข้อมูลให้ โดยหน่วยนับจะอ้างอิงจากข้อมูลการค้าโดยตรง</span>`;
+  }else{
+    st.innerHTML = `ผลการตรวจสอบ: <b>${subject.nameTh||code}</b>${subject.unitFromProduct?` · หน่วยนับ ${subject.unitFromProduct}`:''}`;
+  }
+  gotoDetail(subject);
+}
+
+$('j_lvl').addEventListener('click', e=>{
+  const s=e.target.closest('span'); if(!s) return;
+  $('j_lvl').querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); jumpLvl = s.dataset.v;
+  $('j_code').placeholder = jumpLvl==='com' ? 'เลข 9 หลัก เช่น 101120200' : 'เช่น 1203';
+  $('j_status').textContent = '';
+});
+$('j_flow').addEventListener('click', e=>{
+  const s=e.target.closest('span'); if(!s) return;
+  $('j_flow').querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); jumpFlow = s.dataset.v;
+});
+$('j_go').addEventListener('click', jumpToCode);
+$('j_code').addEventListener('keydown', e=>{ if(e.key==='Enter') jumpToCode(); });
+
+/* ---- events page 1 ---- */
+$('go').addEventListener('click', search);
+$('kw').addEventListener('keydown', e=>{ if(e.key==='Enter') search(); });
+$('segImex').addEventListener('click', e=>{
+  const s=e.target.closest('span'); if(!s) return;
+  $('segImex').querySelectorAll('span').forEach(x=>x.classList.remove('on'));
+  s.classList.add('on'); imex=s.dataset.v; if(rows.length) search();
+});
+['rev','ord'].forEach(id=>$(id).addEventListener('change',()=>{ if(rows.length) search(); }));
+['hslen','grp'].forEach(id=>$(id).addEventListener('change',()=>{ if(rows.length) renderList(); }));
+$('csv').addEventListener('click',()=>{
+  const d=filtered(); if(!d.length) return;
+  const headers = ['revision','imex_type','hs_code','hs_description_th','hs_description_en',
+                   'com_code','com_description_th','com_description_en','unit_code','unit','unit2th','unit2en'];
+  const esc = v => {
+    if(v===null||v===undefined) return '';
+    const s=String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+  };
+  const csv='\uFEFF'+headers.join(',')+'\n'+
+    d.map(r=>headers.map(h=>esc(r[h])).join(',')).join('\n')+'\n';
+  const kw=$('kw').value.trim().replace(/[\\/:*?"<>|\s]+/g,'_');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`MOC_products_${kw||'all'}.csv`; a.click();
+});
+</script>
+</body>
+</html>
